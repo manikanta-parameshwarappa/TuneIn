@@ -1,5 +1,11 @@
 class User < ApplicationRecord
   ROLES = %w[listener artist admin].freeze
+  
+  has_secure_password
+
+  validates :email, presence: true, uniqueness: true
+  validates :name, presence: true
+
   validates :role, inclusion: { in: ROLES }
 
   has_one :artist, dependent: :destroy
