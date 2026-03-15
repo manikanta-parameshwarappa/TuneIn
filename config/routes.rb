@@ -33,6 +33,9 @@ Rails.application.routes.draw do
 
   resources :songs do
     resources :likes
+    collection do
+      post :bulk_create
+    end
   end
 
   resources :playlists do
