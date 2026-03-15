@@ -11,4 +11,24 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   # root "posts#index"
+  resources :users do
+    resources :playlists
+    resources :likes
+  end
+
+  resources :artists do
+    resources :albums
+  end
+
+  resources :albums do
+    resources :songs
+  end
+
+  resources :songs do
+    resources :likes
+  end
+
+  resources :playlists do
+    resources :playlist_songs
+  end
 end
