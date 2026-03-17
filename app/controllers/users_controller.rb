@@ -2,10 +2,6 @@ class UsersController < ApplicationController
   include Authenticatable
 
   def profile
-    render json: {
-      id: current_user.id,
-      name: current_user.name,
-      email: current_user.email
-    }
+    render json: @current_user
   end
 end

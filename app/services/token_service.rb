@@ -8,12 +8,12 @@ class TokenService
     raw_refresh_token = SecureRandom.hex(64)
     token_digest = BCrypt::Password.create(raw_refresh_token)
 
-    refresh_record = user.refresh_tokens.create!(
+    user.refresh_tokens.create!(
       token_digest: token_digest,
       expires_at: REFRESH_EXPIRY.from_now
     )
 
-    [access_token, raw_refresh_token, refresh_record]
+    [access_token, raw_refresh_token]
   end
 
   def self.verify_refresh_token(user, raw_token)
@@ -23,7 +23,12 @@ class TokenService
   end
 
   def self.rotate_refresh_token(user, old_token_record)
-    old_token_record.destroy
+    old_token_record.update(revoked: true)
     generate_tokens(user)
+  end
+
+  def self.revoke_refresh_token(user, raw_token)
+    token = verify_refresh_token(user, raw_token)
+    token&.update(revoked: true)
   end
 end
