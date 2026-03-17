@@ -12,11 +12,12 @@ Rails.application.routes.draw do
   # Defines the root path route ("/")
   # root "posts#index"
 
-  post "/signup",  to: "users#create"
-  post "/login",   to: "users#login"
-  post "/refresh", to: "users#refresh"
-  delete "/logout", to: "users#logout"
-  get "/profile",  to: "users#profile"
+  post "/signup", to: "auth#signup"
+  post "/login", to: "auth#login"
+  post "/refresh", to: "auth#refresh"
+  delete "/logout", to: "auth#logout"
+
+  get "/profile", to: "users#profile"
 
   resources :users do
     resources :playlists

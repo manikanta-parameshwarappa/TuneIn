@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_15_194119) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_17_120340) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -88,6 +88,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_15_194119) do
     t.index ["user_id"], name: "index_playlists_on_user_id"
   end
 
+  create_table "refresh_tokens", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "token_digest"
+    t.datetime "expires_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_refresh_tokens_on_user_id"
+  end
+
   create_table "song_artists", force: :cascade do |t|
     t.bigint "song_id", null: false
     t.bigint "artist_id", null: false
@@ -127,6 +136,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_15_194119) do
   add_foreign_key "playlist_songs", "playlists"
   add_foreign_key "playlist_songs", "songs"
   add_foreign_key "playlists", "users"
+  add_foreign_key "refresh_tokens", "users"
   add_foreign_key "song_artists", "artists"
   add_foreign_key "song_artists", "songs"
   add_foreign_key "songs", "albums"
