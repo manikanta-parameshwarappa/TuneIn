@@ -25,33 +25,40 @@ class AuthController < ApplicationController
 
   # 🔁 REFRESH TOKEN
   def refresh
-    token = params[:refresh_token]
+    raw_token = cookies[:refresh_token]
+    return render json: { error: "Unauthorized" }, status: :unauthorized unless raw_token
 
-    refresh_token = RefreshToken.find_by(token: token)
-
-    if refresh_token.nil? || refresh_token.revoked || refresh_token.expired?
-      return render json: { error: "Invalid refresh token" }, status: :unauthorized
+    refresh_token = RefreshToken.active.find do |t|
+      BCrypt::Password.new(t.token_digest) == raw_token
     end
 
-    # 🔄 Token Rotation (recommended)
-    refresh_token.revoke!
+    return render json: { error: "Invalid refresh token" }, status: :unauthorized unless refresh_token
 
+    refresh_token.revoke!
     new_refresh_token = create_refresh_token(refresh_token.user)
     access_token = JwtService.encode(user_id: refresh_token.user.id)
 
-    render json: {
-      access_token: access_token,
-      refresh_token: new_refresh_token.token
+    cookies[:refresh_token] = {
+      value: new_refresh_token,
+      httponly: true,
+      secure: Rails.env.production?,
+      same_site: :strict
     }
+
+    render json: { access_token: access_token }
   end
 
   # 🚪 LOGOUT
   def logout
-    token = params[:refresh_token]
+    raw_token = cookies[:refresh_token]
+    if raw_token
+      token = RefreshToken.find do |t|
+        BCrypt::Password.new(t.token_digest) == raw_token
+      end
+      token&.revoke!
+    end
 
-    refresh_token = RefreshToken.find_by(token: token)
-    refresh_token&.revoke!
-
+    cookies.delete(:refresh_token)
     render json: { message: "Logged out successfully" }
   end
 
@@ -59,23 +66,39 @@ class AuthController < ApplicationController
 
   def render_tokens(user)
     access_token = JwtService.encode(user_id: user.id)
-    refresh_token = create_refresh_token(user)
+    raw_refresh_token = create_refresh_token(user)
+
+    cookies[:refresh_token] = {
+      value: raw_refresh_token,
+      httponly: true,
+      secure: Rails.env.production?,
+      same_site: :strict
+    }
 
     render json: {
       access_token: access_token,
-      refresh_token: refresh_token.token
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email
+      }
     }
   end
 
   def create_refresh_token(user)
+    raw_refresh_token = SecureRandom.hex(64)
+    token_digest = BCrypt::Password.create(raw_refresh_token)
+
     user.refresh_tokens.create!(
-      token: SecureRandom.hex(64),
+      token_digest: token_digest,
       expires_at: 7.days.from_now
     )
+
+    raw_refresh_token
   end
 
   def user_params
-    params.permit(:email, :password, :password_confirmation)
+    params.permit(:name, :email, :password, :password_confirmation)
   end
 
   # 🔒 AUTH MIDDLEWARE
