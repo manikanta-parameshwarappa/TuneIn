@@ -28,9 +28,8 @@ class AuthController < ApplicationController
     raw_token = cookies[:refresh_token]
     return render json: { error: "Unauthorized" }, status: :unauthorized unless raw_token
 
-    refresh_token = RefreshToken.active.find do |t|
-      BCrypt::Password.new(t.token_digest) == raw_token
-    end
+    digest = Digest::SHA256.hexdigest(raw_token)
+    refresh_token = RefreshToken.active.find_by(token_digest: digest)
 
     return render json: { error: "Invalid refresh token" }, status: :unauthorized unless refresh_token
 
@@ -52,9 +51,8 @@ class AuthController < ApplicationController
   def logout
     raw_token = cookies[:refresh_token]
     if raw_token
-      token = RefreshToken.find do |t|
-        BCrypt::Password.new(t.token_digest) == raw_token
-      end
+      digest = Digest::SHA256.hexdigest(raw_token)
+      token = RefreshToken.find_by(token_digest: digest)
       token&.revoke!
     end
 
@@ -87,7 +85,7 @@ class AuthController < ApplicationController
 
   def create_refresh_token(user)
     raw_refresh_token = SecureRandom.hex(64)
-    token_digest = BCrypt::Password.create(raw_refresh_token)
+    token_digest = Digest::SHA256.hexdigest(raw_refresh_token)
 
     user.refresh_tokens.create!(
       token_digest: token_digest,

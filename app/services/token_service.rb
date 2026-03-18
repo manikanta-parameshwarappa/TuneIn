@@ -6,7 +6,7 @@ class TokenService
     access_token = JwtService.encode({ user_id: user.id }, ACCESS_EXPIRY.from_now)
 
     raw_refresh_token = SecureRandom.hex(64)
-    token_digest = BCrypt::Password.create(raw_refresh_token)
+    token_digest = Digest::SHA256.hexdigest(raw_refresh_token)
 
     user.refresh_tokens.create!(
       token_digest: token_digest,
@@ -17,9 +17,8 @@ class TokenService
   end
 
   def self.verify_refresh_token(user, raw_token)
-    user.refresh_tokens.active.find do |token|
-      BCrypt::Password.new(token.token_digest) == raw_token
-    end
+    digest = Digest::SHA256.hexdigest(raw_token)
+    user.refresh_tokens.active.find_by(token_digest: digest)
   end
 
   def self.rotate_refresh_token(user, old_token_record)
@@ -28,7 +27,8 @@ class TokenService
   end
 
   def self.revoke_refresh_token(user, raw_token)
-    token = verify_refresh_token(user, raw_token)
+    digest = Digest::SHA256.hexdigest(raw_token)
+    token = user.refresh_tokens.find_by(token_digest: digest)
     token&.update(revoked: true)
   end
 end
