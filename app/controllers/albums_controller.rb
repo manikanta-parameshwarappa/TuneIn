@@ -1,4 +1,6 @@
 class AlbumsController < ApplicationController
+  before_action :authorize_admin!, only: [:create, :update, :destroy]
+
    # GET /albums
   def index
     albums = Album.all
@@ -39,6 +41,12 @@ class AlbumsController < ApplicationController
   end
 
   private
+
+  def authorize_admin!
+    unless current_user&.role == "admin"
+      render json: { error: "Unauthorized" }, status: :forbidden
+    end
+  end
 
   def album_params
     params.require(:album).permit(:name, :released_date, :description, :artist_id, :cover_image)

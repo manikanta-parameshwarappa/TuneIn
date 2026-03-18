@@ -1,5 +1,5 @@
 class ArtistsController < ApplicationController
-  before_action :authorize_request
+  before_action :authorize_admin!, only: [:create, :update, :destroy]
   before_action :set_artist, only: [:show, :update, :destroy]
 
   # GET /artists
@@ -14,11 +14,6 @@ class ArtistsController < ApplicationController
 
   # POST /artists
   def create
-    # Only admins can create artist users
-    unless current_user.role == "admin"
-      return render json: { error: "Forbidden" }, status: :forbidden
-    end
-
     user = User.new(
       name: params[:name],
       email: params[:email],
@@ -51,6 +46,12 @@ class ArtistsController < ApplicationController
   end
 
   private
+
+  def authorize_admin!
+    unless current_user&.role == "admin"
+      render json: { error: "Unauthorized" }, status: :forbidden
+    end
+  end
 
   def set_artist
     @artist = Artist.find_by(id: params[:id])
