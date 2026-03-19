@@ -44,7 +44,14 @@ class AuthController < ApplicationController
       same_site: :strict
     }
 
-    render json: { access_token: access_token }
+    current_user = User.find_by(id: refresh_token.user.id)
+
+    render json: { access_token: access_token, user: {
+        id: current_user.id,
+        name: current_user.name,
+        email: current_user.email
+    } }
+
   end
 
   # 🚪 LOGOUT
