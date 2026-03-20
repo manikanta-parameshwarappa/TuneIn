@@ -6,12 +6,32 @@ class ArtistsController < ApplicationController
 
   # GET /artists
   def index
-    render json: Artist.includes(:user).all, include: :user
+    artists = Artist.includes(:user).all
+    render json: {
+      artists: artists.map { |artist|
+        {
+          id: artist.id,
+          name: artist.user.name,
+          bio: artist.bio,
+          email: artist.user.email
+        }
+      },
+      count: artists.size
+    }
   end
 
   # GET /artists/:id
   def show
-    render json: @artist, include: :user
+    render json: {
+      id: @artist.id,
+      name: @artist.user.name,
+      bio: @artist.bio,
+      user: {
+        id: @artist.user.id,
+        email: @artist.user.email,
+        role: @artist.user.role
+      }
+    }
   end
 
   # POST /artists
@@ -27,7 +47,18 @@ class ArtistsController < ApplicationController
 
     if user.save
       artist = Artist.create(user: user, bio: params[:bio])
-      render json: { user: user, artist: artist }, status: :created
+      render json: {
+        id: artist.id,
+        name: user.name,
+        bio: artist.bio,
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role
+        },
+        created_at: artist.created_at,
+        updated_at: artist.updated_at
+      }, status: :created
     else
       render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
     end
