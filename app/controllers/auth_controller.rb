@@ -49,7 +49,8 @@ class AuthController < ApplicationController
     render json: { access_token: access_token, user: {
         id: current_user.id,
         name: current_user.name,
-        email: current_user.email
+        email: current_user.email,
+        role: current_user.role
     } }
 
   end
@@ -85,7 +86,8 @@ class AuthController < ApplicationController
       user: {
         id: user.id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role
       }
     }
   end
