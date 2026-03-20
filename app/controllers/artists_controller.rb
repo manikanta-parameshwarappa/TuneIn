@@ -1,4 +1,6 @@
 class ArtistsController < ApplicationController
+  include Authenticatable
+
   before_action :authorize_admin!, only: [:create, :update, :destroy]
   before_action :set_artist, only: [:show, :update, :destroy]
 
@@ -14,11 +16,12 @@ class ArtistsController < ApplicationController
 
   # POST /artists
   def create
+    password = "secureartist123"
     user = User.new(
       name: params[:name],
       email: params[:email],
-      password: params[:password],
-      password_confirmation: params[:password_confirmation],
+      password: password,
+      password_confirmation: password,
       role: "artist"
     )
 
