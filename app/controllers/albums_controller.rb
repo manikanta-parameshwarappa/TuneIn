@@ -1,4 +1,6 @@
 class AlbumsController < ApplicationController
+  include Authenticatable
+
   before_action :authorize_admin!, only: [:create, :update, :destroy]
 
    # GET /albums

@@ -1,19 +1,12 @@
 class SongsController < ApplicationController
-  before_action :authorize_request
+  include Authenticatable
+
+  before_action :authorize_admin!, only: [:create, :update, :destroy]
   before_action :set_song, only: [:show, :update, :destroy]
 
   # GET /songs
   def index
-    songs =
-      case current_user.role
-      when "admin"
-        Song.includes(:album, :artists).all
-      when "artist"
-        current_user.artist.songs.includes(:album, :artists)
-      else
-        return render json: { error: "Forbidden" }, status: :forbidden
-      end
-
+    songs = Song.includes(:album, :artists).all
     render json: songs, include: [:album, :artists]
   end
 
