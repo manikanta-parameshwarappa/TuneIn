@@ -10,40 +10,34 @@ class SongsController < ApplicationController
     render json: songs, include: [:album, :artists]
   end
 
-    # POST /songs/bulk_create
+  # POST /songs/bulk_create
   def bulk_create
-    unless %w[admin artist].include?(current_user.role)
-      return render json: { error: "Forbidden" }, status: :forbidden
-    end
-
     created_songs = []
 
-    params[:songs].each do |song_data|
-      album =
-        if current_user.role == "artist"
-          current_user.artist.albums.find(song_data[:album_id])
-        else
-          Album.find(song_data[:album_id])
-        end
+    params[:songs].each do |_, song_data|
+      # song_data is now the ActionController::Parameters object
+      permitted = song_data.permit(:file, :name, :duration, :genre, :album_id, artist_ids: []).to_h.symbolize_keys
+
+      album = Album.find(permitted[:album_id])
 
       song = album.songs.build(
-        name: song_data[:name],
-        duration: song_data[:duration],
-        genre: song_data[:genre]
+        name: permitted[:name],
+        duration: permitted[:duration],
+        genre: permitted[:genre]
       )
 
       if song.save
         # Link artists if provided
-        if song_data[:artist_ids].present?
+        if permitted[:artist_ids].present?
           song.song_artists.destroy_all
-          song_data[:artist_ids].each do |artist_id|
+          permitted[:artist_ids].each do |artist_id|
             song.song_artists.create(artist_id: artist_id)
           end
         end
 
         # Attach audio file if provided
-        if song_data[:audio_file].present?
-          song.audio_file.attach(song_data[:audio_file])
+        if permitted[:file].present?
+          song.audio_file.attach(permitted[:file])
         end
 
         created_songs << song
