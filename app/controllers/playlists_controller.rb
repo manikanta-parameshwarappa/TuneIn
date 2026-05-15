@@ -1,5 +1,5 @@
 class PlaylistsController < ApplicationController
-  before_action :authorize_request
+  include Authenticatable
   before_action :set_playlist, only: [:show, :update, :destroy, :add_song, :remove_song]
 
   # GET /playlists
