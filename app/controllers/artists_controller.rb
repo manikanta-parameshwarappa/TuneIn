@@ -24,6 +24,7 @@ class ArtistsController < ApplicationController
     user = User.new(
       name: params[:name],
       email: params[:email],
+      dob: params[:dob].presence,
       password: password,
       password_confirmation: password,
       role: "artist"
@@ -50,6 +51,7 @@ class ArtistsController < ApplicationController
     user_update_params = {}
     user_update_params[:name]   = params[:name]  if params[:name].present?
     user_update_params[:email]  = params[:email] if params[:email].present?
+    user_update_params[:dob]    = params[:dob]   if params.key?(:dob)
     user_update_params[:avatar] = params[:avatar] if params[:avatar].present?
 
     user_valid = user_update_params.empty? || user.update(user_update_params)
@@ -88,19 +90,21 @@ class ArtistsController < ApplicationController
   def avatar_url(user)
     return nil unless user.avatar.attached?
 
-    Rails.application.routes.url_helpers.url_for(user.avatar)
+    Rails.application.routes.url_helpers.rails_blob_path(user.avatar, only_path: true)
   end
 
   def serialize_artist(artist)
     {
       id: artist.id,
       bio: artist.bio,
+      dob: artist.user.dob,
       created_at: artist.created_at,
       updated_at: artist.updated_at,
       user: {
         id: artist.user.id,
         name: artist.user.name,
         email: artist.user.email,
+        dob: artist.user.dob,
         role: artist.user.role,
         avatar: avatar_url(artist.user)
       }
