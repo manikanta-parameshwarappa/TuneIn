@@ -96,6 +96,13 @@ class SongsController < ApplicationController
 
   # PATCH/PUT /songs/:id
   def update
+    # Apply album change if provided
+    if params[:album_id].present?
+      album = Album.find_by(id: params[:album_id])
+      return render json: { error: "Album not found" }, status: :not_found unless album
+      @song.album = album
+    end
+
     if @song.update(song_params)
       attach_artists(@song)
       attach_audio(@song)
@@ -139,7 +146,7 @@ class SongsController < ApplicationController
   end
 
   def song_params
-    params.require(:song).permit(:name, :duration, :genre)
+    params.require(:song).permit(:name, :duration, :genre, :album_id)
   end
 
   def attach_artists(song)
@@ -152,8 +159,10 @@ class SongsController < ApplicationController
   end
 
   def attach_audio(song)
-    return unless params[:audio_file].present?
+    # Support both top-level :audio_file and nested song[:audio_file]
+    audio = params[:audio_file] || params.dig(:song, :audio_file)
+    return unless audio.present?
 
-    song.audio_file.attach(params[:audio_file])
+    song.audio_file.attach(audio)
   end
 end
