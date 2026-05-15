@@ -21,6 +21,7 @@ class SongsController < ApplicationController
         s["artists"] = song.artists.map { |a|
           a.as_json(only: [:id, :bio]).merge("user" => a.user.as_json(only: [:id, :name, :email]))
         }
+        s["audio_url"] = song.audio_file.attached? ? rails_blob_url(song.audio_file, only_path: true) : nil
       end
     }
   end
@@ -133,6 +134,7 @@ class SongsController < ApplicationController
       s["artists"] = song.artists.map { |a|
         a.as_json(only: [:id, :bio]).merge("user" => a.user.as_json(only: [:id, :name, :email]))
       }
+      s["audio_url"] = song.audio_file.attached? ? rails_blob_url(song.audio_file, only_path: true) : nil
     end
   end
 
