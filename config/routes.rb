@@ -5,10 +5,6 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
-  # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
-  # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
-  # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
-
   # Defines the root path route ("/")
   # root "posts#index"
 
@@ -20,9 +16,11 @@ Rails.application.routes.draw do
   get "/profile", to: "users#profile"
   patch "/profile", to: "users#update"
 
+  # Liked songs for current user
+  get "/liked_songs", to: "likes#user_likes"
+
   resources :users do
     resources :playlists
-    resources :likes
   end
 
   resources :artists do
@@ -34,13 +32,15 @@ Rails.application.routes.draw do
   end
 
   resources :songs do
-    resources :likes
+    # POST /songs/:song_id/likes  — toggle like
+    # GET  /songs/:song_id/likes  — check like status
+    resources :likes, only: [:create, :index]
     collection do
       post :bulk_create
     end
   end
 
   resources :playlists do
-    resources :playlist_songs
+    resources :playlist_songs, only: [:create, :destroy]
   end
 end

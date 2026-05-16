@@ -6,24 +6,10 @@ class SongsController < ApplicationController
 
   # GET /songs
   def index
-    songs = Song.includes(:album, :artists).all
-    render json: songs.map { |song|
-      song.as_json(include: {
-        album: { only: [:id, :name], methods: [] },
-        artists: { include: :user }
-      }).tap do |s|
-        album = song.album
-        if album
-          s["album"] = album.as_json(only: [:id, :name]).merge(
-            "cover_image_url" => album.cover_image.attached? ? rails_blob_url(album.cover_image, only_path: true) : nil
-          )
-        end
-        s["artists"] = song.artists.map { |a|
-          a.as_json(only: [:id, :bio]).merge("user" => a.user.as_json(only: [:id, :name, :email]))
-        }
-        s["audio_url"] = song.audio_file.attached? ? rails_blob_url(song.audio_file, only_path: true) : nil
-      end
-    }
+    songs = Song.includes(:album, :artists, :likes).all
+    # Pre-load liked song IDs for current user to avoid N+1
+    liked_song_ids = current_user.likes.pluck(:song_id).to_set
+    render json: songs.map { |song| song_json(song, liked_song_ids) }
   end
 
   # POST /songs/bulk_create
@@ -68,7 +54,8 @@ class SongsController < ApplicationController
 
   # GET /songs/:id
   def show
-    render json: song_json(@song)
+    liked = current_user.likes.exists?(song_id: @song.id)
+    render json: song_json(@song, liked ? Set.new([@song.id]) : Set.new)
   end
 
   # POST /songs
@@ -132,7 +119,7 @@ class SongsController < ApplicationController
     render json: { error: "Song not found" }, status: :not_found and return unless @song
   end
 
-  def song_json(song)
+  def song_json(song, liked_song_ids = Set.new)
     song.as_json(only: [:id, :name, :duration, :genre, :album_id]).tap do |s|
       album = song.album
       s["album"] = album ? album.as_json(only: [:id, :name]).merge(
@@ -142,6 +129,7 @@ class SongsController < ApplicationController
         a.as_json(only: [:id, :bio]).merge("user" => a.user.as_json(only: [:id, :name, :email]))
       }
       s["audio_url"] = song.audio_file.attached? ? rails_blob_url(song.audio_file, only_path: true) : nil
+      s["liked"] = liked_song_ids.include?(song.id)
     end
   end
 

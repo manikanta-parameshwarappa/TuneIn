@@ -1,16 +1,16 @@
 class PlaylistsController < ApplicationController
   include Authenticatable
-  before_action :set_playlist, only: [:show, :update, :destroy, :add_song, :remove_song]
+  before_action :set_playlist, only: [:show, :update, :destroy]
 
   # GET /playlists
   def index
-    playlists = current_user.playlists.includes(:songs)
-    render json: playlists, include: :songs
+    playlists = current_user.playlists.includes(songs: [:album, :artists])
+    render json: playlists.map { |p| playlist_json(p) }
   end
 
   # GET /playlists/:id
   def show
-    render json: @playlist, include: :songs
+    render json: playlist_json(@playlist)
   end
 
   # POST /playlists
@@ -18,7 +18,7 @@ class PlaylistsController < ApplicationController
     playlist = current_user.playlists.build(playlist_params)
 
     if playlist.save
-      render json: playlist, status: :created
+      render json: playlist_json(playlist), status: :created
     else
       render json: { errors: playlist.errors.full_messages }, status: :unprocessable_entity
     end
@@ -27,7 +27,7 @@ class PlaylistsController < ApplicationController
   # PATCH/PUT /playlists/:id
   def update
     if @playlist.update(playlist_params)
-      render json: @playlist
+      render json: playlist_json(@playlist)
     else
       render json: { errors: @playlist.errors.full_messages }, status: :unprocessable_entity
     end
@@ -39,24 +39,6 @@ class PlaylistsController < ApplicationController
     render json: { message: "Playlist deleted successfully" }
   end
 
-  # POST /playlists/:id/add_song
-  def add_song
-    song = Song.find(params[:song_id])
-    @playlist.playlist_songs.create(song: song)
-    render json: @playlist, include: :songs
-  end
-
-  # DELETE /playlists/:id/remove_song
-  def remove_song
-    playlist_song = @playlist.playlist_songs.find_by(song_id: params[:song_id])
-    if playlist_song
-      playlist_song.destroy
-      render json: @playlist, include: :songs
-    else
-      render json: { error: "Song not found in playlist" }, status: :not_found
-    end
-  end
-
   private
 
   def set_playlist
@@ -66,5 +48,23 @@ class PlaylistsController < ApplicationController
 
   def playlist_params
     params.require(:playlist).permit(:name, :description, :is_public)
+  end
+
+  def playlist_json(playlist)
+    playlist.as_json(only: [:id, :name, :description, :is_public, :created_at, :updated_at]).tap do |p|
+      p["song_count"] = playlist.songs.count
+      p["songs"] = playlist.songs.includes(:album, :artists).map { |song|
+        song.as_json(only: [:id, :name, :duration, :genre, :album_id]).tap do |s|
+          album = song.album
+          s["album"] = album ? album.as_json(only: [:id, :name]).merge(
+            "cover_image_url" => album.cover_image.attached? ? rails_blob_url(album.cover_image, only_path: true) : nil
+          ) : nil
+          s["artists"] = song.artists.map { |a|
+            a.as_json(only: [:id, :bio]).merge("user" => a.user.as_json(only: [:id, :name, :email]))
+          }
+          s["audio_url"] = song.audio_file.attached? ? rails_blob_url(song.audio_file, only_path: true) : nil
+        end
+      }
+    end
   end
 end
